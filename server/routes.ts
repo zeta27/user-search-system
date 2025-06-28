@@ -55,10 +55,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (fileExtension === '.xlsx' || fileExtension === '.xls') {
         // Parse Excel
         const XLSX = await import('xlsx');
-        const workbook = XLSX.readFile(filePath);
+        const xlsxModule = XLSX.default || XLSX;
+        const workbook = xlsxModule.readFile(filePath);
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData = xlsxModule.utils.sheet_to_json(worksheet);
         usuarios.push(...jsonData);
       } else {
         return res.status(400).json({ error: "Unsupported file format" });
