@@ -45,9 +45,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fileExtension === '.csv') {
         // Parse CSV
         await new Promise((resolve, reject) => {
+          const parser = csv.default ? csv.default() : csv();
           fs.createReadStream(filePath)
-            .pipe(csv())
-            .on('data', (data) => usuarios.push(data))
+            .pipe(parser)
+            .on('data', (data: any) => usuarios.push(data))
             .on('end', resolve)
             .on('error', reject);
         });

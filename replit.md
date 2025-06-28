@@ -67,9 +67,9 @@ usuarios {
 6. Success/error feedback returned to frontend
 
 ### Data Storage
-- Current implementation uses in-memory storage (`MemStorage`)
-- Storage interface designed for easy migration to database
-- Email indexing for fast lookups
+- PostgreSQL database with Drizzle ORM (`DatabaseStorage`)
+- Neon Database as serverless PostgreSQL provider
+- Email indexing for fast lookups with case-insensitive search
 - Auto-incrementing ID generation
 
 ## External Dependencies

@@ -1,4 +1,6 @@
-import { type Usuario, type InsertUsuario } from "@shared/schema";
+import { usuarios, type Usuario, type InsertUsuario } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUsuarioByCorreo(correo: string): Promise<Usuario | undefined>;
@@ -8,49 +10,45 @@ export interface IStorage {
   clearUsuarios(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private usuarios: Map<number, Usuario>;
-  private correoIndex: Map<string, number>;
-  currentId: number;
-
-  constructor() {
-    this.usuarios = new Map();
-    this.correoIndex = new Map();
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUsuarioByCorreo(correo: string): Promise<Usuario | undefined> {
-    const id = this.correoIndex.get(correo.toLowerCase());
-    if (!id) return undefined;
-    return this.usuarios.get(id);
+    const [usuario] = await db.select().from(usuarios).where(eq(usuarios.correo, correo.toLowerCase()));
+    return usuario || undefined;
   }
 
   async createUsuario(insertUsuario: InsertUsuario): Promise<Usuario> {
-    const id = this.currentId++;
-    const usuario: Usuario = { ...insertUsuario, id };
-    this.usuarios.set(id, usuario);
-    this.correoIndex.set(insertUsuario.correo.toLowerCase(), id);
+    const [usuario] = await db
+      .insert(usuarios)
+      .values({
+        ...insertUsuario,
+        correo: insertUsuario.correo.toLowerCase()
+      })
+      .returning();
     return usuario;
   }
 
   async createMultipleUsuarios(insertUsuarios: InsertUsuario[]): Promise<Usuario[]> {
-    const usuarios: Usuario[] = [];
-    for (const insertUsuario of insertUsuarios) {
-      const usuario = await this.createUsuario(insertUsuario);
-      usuarios.push(usuario);
-    }
-    return usuarios;
+    if (insertUsuarios.length === 0) return [];
+    
+    const usuariosData = insertUsuarios.map(u => ({
+      ...u,
+      correo: u.correo.toLowerCase()
+    }));
+
+    const createdUsuarios = await db
+      .insert(usuarios)
+      .values(usuariosData)
+      .returning();
+    return createdUsuarios;
   }
 
   async getAllUsuarios(): Promise<Usuario[]> {
-    return Array.from(this.usuarios.values());
+    return await db.select().from(usuarios);
   }
 
   async clearUsuarios(): Promise<void> {
-    this.usuarios.clear();
-    this.correoIndex.clear();
-    this.currentId = 1;
+    await db.delete(usuarios);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
